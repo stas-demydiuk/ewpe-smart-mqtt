@@ -3,6 +3,8 @@ MQTT bridge for EWPE Smart powered devices which can be controled via WiFi using
 
 This project became possible thanks to great work of reverse engineering the original app protocol in [gree-remote](https://github.com/tomikaa87/gree-remote) project
 
+![smart-1-600x600](https://user-images.githubusercontent.com/2734836/49315058-11f16e00-f4f5-11e8-84f5-81dc9cd813f0.jpg)
+
 ## Prerequisites
 
 Setup and run MQTT server ([mosquitto](https://mosquitto.org/) is the easiest one)
