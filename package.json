@@ -7,7 +7,7 @@
     "start": "node index.js"
   },
   "author": "Stanislav Demydiuk",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "mqtt": "^2.18.8",
     "winston": "^3.1.0"
