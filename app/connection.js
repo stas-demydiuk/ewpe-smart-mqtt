@@ -25,6 +25,10 @@ class Connection extends EventEmitter {
             this.scan(address);
         });
 
+        this.socket.on('error', (error) => {
+            logger.error(error.message);
+        });
+
         this.socket.bind();
     }
 
@@ -71,7 +75,10 @@ class Connection extends EventEmitter {
                     return;
                 }
 
-                this.socket.off('message', messageHandler);
+                if (this.socket && this.socket.off) {
+                    this.socket.off('message', messageHandler);
+                }
+
                 resolve(response);
             }
         
