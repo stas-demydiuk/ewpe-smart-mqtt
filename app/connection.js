@@ -61,6 +61,8 @@ class Connection extends EventEmitter {
                 const message = JSON.parse(msg.toString());
                 let response;
                 
+                logger.debug(`Received message from ${rinfo.address}:${rinfo.port} ${msg.toString()}`);
+
                 // Check device address data
                 if (rinfo.address !== address || rinfo.port !== port) {
                     return;
@@ -68,7 +70,7 @@ class Connection extends EventEmitter {
 
                 try {
                     response = decrypt(message.pack, key);
-                } catch {
+                } catch (e) {
                     logger.error(`Can not decrypt message "${msg.toString()}" with key ${key}`);
                     return;
                 }
