@@ -12,7 +12,7 @@ const myFormat = logger.format.printf(info => {
 })
 
 logger.configure({
-    level: 'debug',
+    level: process.env.LOG_LEVEL || 'info',
     format: logger.format.combine(
         logger.format.timestamp(),
         logger.format.colorize(),
@@ -41,7 +41,7 @@ mqttClient.on('connect', () => {
     mqttClient.on('message', async (topic, message) => {
         let matches;
         
-        logger.debug(`MQTT message: ${topic}`);
+        logger.info(`MQTT message received: ${topic} ${message}`);
 
         if (topic === `${mqttBaseTopic}/devices/list`) {
             mqttClient.publish(`${mqttBaseTopic}/devices`, JSON.stringify(deviceManager.getDevices()))
