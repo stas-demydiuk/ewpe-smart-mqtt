@@ -61,17 +61,18 @@ class Connection extends EventEmitter {
                 const message = JSON.parse(msg.toString());
                 let response;
                 
-                logger.debug(`Received message from ${rinfo.address}:${rinfo.port} ${msg.toString()}`);
-
                 // Check device address data
                 if (rinfo.address !== address || rinfo.port !== port) {
                     return;
                 }
 
+                logger.debug(`Received message from ${message.cid} (${rinfo.address}:${rinfo.port}) ${msg.toString()}`);
+
                 try {
                     response = decrypt(message.pack, key);
                 } catch (e) {
-                    logger.error(`Can not decrypt message "${msg.toString()}" with key ${key}`);
+                    logger.error(`Can not decrypt message from ${message.cid} (${rinfo.address}:${rinfo.port}) with key ${key}`);
+                    logger.debug(message.pack)
                     return;
                 }
 
