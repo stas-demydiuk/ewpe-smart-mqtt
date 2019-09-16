@@ -1,3 +1,4 @@
+require('dotenv').config()
 const mqtt = require('mqtt');
 const logger = require('winston');
 const DeviceManager = require('./app/device_manager');
@@ -70,4 +71,8 @@ mqttClient.on('connect', () => {
             setInterval(() => getDeviceStatus(deviceId), pollInterval);
         }
     });
+});
+
+mqttClient.on('error', (error) => {
+    logger.error(error);
 });

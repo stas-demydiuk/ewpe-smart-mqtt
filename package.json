@@ -1,6 +1,6 @@
 {
   "name": "ewpe-smart-mqtt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MQTT Bridge for EWPE Smart powered air conditioners",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,8 @@
   "author": "Stanislav Demydiuk",
   "license": "MIT",
   "dependencies": {
-    "mqtt": "^2.18.8",
-    "winston": "^3.1.0"
+    "dotenv": "^8.1.0",
+    "mqtt": "^3.0.0",
+    "winston": "^3.2.1"
   }
 }
