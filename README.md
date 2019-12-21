@@ -25,7 +25,7 @@ npm install
 | --- | --- | --- |
 | MQTT_SERVER |MQTT server URI|mqtt://127.0.0.1|
 | MQTT_BASE_TOPIC |Base MQTT topic for bridge messages|ewpe-smart
-| NETWORK |Network adress to scan devices|192.168.1.255
+| NETWORK |Network adress (or addresses separated by semicolon) to scan devices |192.168.1.255
 | DEVICE_POLL_INTERVAL |Interval (ms) to poll device status|5000
 
 4. Run the bridge
