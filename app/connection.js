@@ -20,7 +20,7 @@ class Connection extends EventEmitter {
 
         this.socket.on('listening', () => {
             const socketAddress = this.socket.address();
-            logger.info(`Server is listening on ${socketAddress.address}:${socketAddress.port}`)
+            logger.info(`Socket server is listening on ${socketAddress.address}:${socketAddress.port}`)
 
             this.scan(address);
         });
@@ -40,11 +40,15 @@ class Connection extends EventEmitter {
         return this.devices[deviceId] || defaultKey;
     }
 
-    scan(address) {
+    scan(networks) {
         const message = Buffer.from(JSON.stringify({t: 'scan'}));
 
         this.socket.setBroadcast(true);
-        this.socket.send(message, 0, message.length, 7000, address);
+
+        networks.split(';').forEach((networkAddress) => {
+            logger.debug(`Scanning network ${networkAddress} for available devices...`)
+            this.socket.send(message, 0, message.length, 7000, networkAddress);
+        })
     }
 
     async sendRequest(address, port, key, payload) {
