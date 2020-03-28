@@ -9,7 +9,8 @@ const mqttBaseTopic = process.env.MQTT_BASE_TOPIC || 'ewpe-smart';
 const pollInterval = process.env.DEVICE_POLL_INTERVAL || 5000;
 
 const myFormat = logger.format.printf(info => {
-    return `${info.timestamp} [${info.level}]: ${JSON.stringify(info.message)}`;
+    const message = JSON.stringify(info.message).replace(/["\\]/g, '')
+    return `${info.timestamp} [${info.level}]: ${message}`;
 })
 
 logger.configure({
@@ -25,9 +26,12 @@ logger.configure({
     ]
 });
 
+logger.info(`Trying to connect to MQTT server ${mqttServerAddress} ...`)
 const mqttClient = mqtt.connect(mqttServerAddress);
 
 mqttClient.on('connect', () => {
+    logger.info('Successfully connected to MQTT server');
+
     const deviceRegex = new RegExp(`^${mqttBaseTopic}\/([0-9a-h]{12})\/(.*)$`, 'i');
     const deviceManager = new DeviceManager(networkAddress, pollInterval);
 
@@ -41,7 +45,7 @@ mqttClient.on('connect', () => {
 
     mqttClient.on('message', async (topic, message) => {
         let matches;
-        
+
         logger.info(`MQTT message received: ${topic} ${message}`);
 
         if (topic === `${mqttBaseTopic}/devices/list`) {
