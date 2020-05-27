@@ -31,7 +31,7 @@ logger.configure({
 
 logger.info(`Trying to connect to MQTT server ${mqttServerAddress} ...`)
 const mqttClient = mqtt.connect(mqttServerAddress, {
-            username: mqttServerUsername',
+            username: mqttServerUsername,
             password: mqttServerpassword,
             port: mqttServerport
 });
