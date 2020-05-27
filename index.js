@@ -7,6 +7,9 @@ const networkAddress = process.env.NETWORK || '192.168.1.255';
 const mqttServerAddress = process.env.MQTT_SERVER || 'mqtt://127.0.0.1';
 const mqttBaseTopic = process.env.MQTT_BASE_TOPIC || 'ewpe-smart';
 const pollInterval = process.env.DEVICE_POLL_INTERVAL || 5000;
+const mqttServerUsername = process.env.MQTT_USERNAME || '';
+const mqttServerpassword = process.env.MQTT_PASSWORD || '';
+const mqttServerport = process.env.MQTT_PORT || '';
 
 const myFormat = logger.format.printf(info => {
     const message = JSON.stringify(info.message).replace(/["\\]/g, '')
@@ -27,7 +30,11 @@ logger.configure({
 });
 
 logger.info(`Trying to connect to MQTT server ${mqttServerAddress} ...`)
-const mqttClient = mqtt.connect(mqttServerAddress);
+const mqttClient = mqtt.connect(mqttServerAddress, {
+            username: mqttServerUsername',
+            password: mqttServerpassword,
+            port: mqttServerport
+});
 
 mqttClient.on('connect', () => {
     logger.info('Successfully connected to MQTT server');
