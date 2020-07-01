@@ -24,9 +24,13 @@ npm install
 | Variable | Description | Default value |
 | --- | --- | --- |
 | MQTT_SERVER |MQTT server URI|mqtt://127.0.0.1|
+| MQTT_PORT |MQTT Server Port|1883
+| MQTT_USERNAME |MQTT Server Username|
+| MQTT_PASSWORD |MQTT Server Password|
 | MQTT_BASE_TOPIC |Base MQTT topic for bridge messages|ewpe-smart
 | NETWORK |Network adress (or addresses separated by semicolon) to scan devices |192.168.1.255
 | DEVICE_POLL_INTERVAL |Interval (ms) to poll device status|5000
+| LOG_LEVEL |App Log level|info
 
 4. Run the bridge
 ```
@@ -61,4 +65,4 @@ All devices which can be controlled via EWPE Smart app should be supported, incl
 - Gree Smart series
 - Cooper&Hunter: Supreme, Vip Inverter, ICY II, Arctic, Alpha, Alpha NG, Veritas, Veritas NG series
 - EcoAir X series
-
+- ProKlima

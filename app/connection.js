@@ -46,7 +46,7 @@ class Connection extends EventEmitter {
         this.socket.setBroadcast(true);
 
         networks.split(';').forEach((networkAddress) => {
-            logger.debug(`Scanning network ${networkAddress} for available devices...`)
+            logger.info(`Scanning network ${networkAddress} for available devices...`)
             this.socket.send(message, 0, message.length, 7000, networkAddress);
         })
     }
