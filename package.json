@@ -1,6 +1,6 @@
 {
   "name": "ewpe-smart-mqtt",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "MQTT Bridge for EWPE Smart powered air conditioners",
   "repository": {
     "type": "git",
