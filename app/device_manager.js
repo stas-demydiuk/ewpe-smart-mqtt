@@ -2,7 +2,7 @@ const logger = require('winston');
 const EventEmitter = require('events');
 const Connection = require('./connection');
 const { defaultKey } = require('./encryptor');
-const TEMPERATURE_SENSOR_OFFSET = 40;
+const TEMPERATURE_SENSOR_OFFSET = -40;
 
 // https://github.com/tomikaa87/gree-remote
 const statusKeys = [
@@ -73,7 +73,7 @@ class DeviceManager extends EventEmitter {
         }), {});
 
         if('TemSen' in deviceStatus){
-            deviceStatus['TemSen'] -=TEMPERATURE_SENSOR_OFFSET;
+            deviceStatus['TemSen'] +=TEMPERATURE_SENSOR_OFFSET;
         }
 
         
