@@ -59,6 +59,8 @@ docker run -it \
 ewpe-smart/{deviceId}/set {"Pow": 1, "SetTem": 24}
 ```
 
+Supported features depend on your AC unit, full list can be found [here ](https://github.com/tomikaa87/gree-remote#reading-status-of-a-device)
+
 ## Supported devices
 All devices which can be controlled via EWPE Smart app should be supported, including:
 
