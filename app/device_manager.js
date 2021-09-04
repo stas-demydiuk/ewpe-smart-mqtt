@@ -21,8 +21,8 @@ class DeviceManager extends EventEmitter {
     }
 
     async _registerDevice(message, rinfo) {
-        const deviceId = message.cid;
-        logger.info(`New device found: ${message.name} (${deviceId}), binding...`)
+        const deviceId = message.cid || message.mac;
+        logger.info(`New device found: ${message.name} (mac: ${deviceId}), binding...`)
         const { address, port } = rinfo;
 
         const { key } = await this.connection.sendRequest(address, port, defaultKey, {
