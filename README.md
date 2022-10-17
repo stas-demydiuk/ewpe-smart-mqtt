@@ -61,7 +61,7 @@ Description=ewpe-smart-mqtt
 After=mosquitto.target
 
 [Service]
-ExecStart=/usr/bin/node /opt/ewpe-smart-mqtt/index.js --NETWORK="192.168.1.255" --MQTT_SERVER="mqtt://127.0.0.1" --MQTT_PORT='1883' --MQTT_USERNAME='' --MQTT_PASSWORD='' --MQTT_BASE_TOPIC="ewpe-smart" DEVICE_POLL_INTERVAL--="5000" 
+ExecStart=/usr/bin/node /opt/ewpe-smart-mqtt/index.js --NETWORK="192.168.1.255" --MQTT_SERVER="mqtt://127.0.0.1" --MQTT_PORT="1883" --MQTT_USERNAME="" --MQTT_PASSWORD="" --MQTT_BASE_TOPIC="ewpe-smart" --DEVICE_POLL_INTERVAL="5000" 
 # Required on some systems
 WorkingDirectory=/opt/ewpe-smart-mqtt
 StandardOutput=inherit
