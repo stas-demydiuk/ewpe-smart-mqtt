@@ -17,7 +17,6 @@ function decrypt(data, key = defaultKey) {
 	const ciphertext = new Buffer(data, 'base64');
 	const plaintext = aesEcb.decrypt(ciphertext).toString();
 	if (plaintext.includes("�")) {null} else {
-	//console.log(plaintext);
         const response = plaintext.slice(0,plaintext.lastIndexOf('}'))+'}';
 	result = JSON.parse(response.toString());
 	result.cid = result.cid || result.mac;
