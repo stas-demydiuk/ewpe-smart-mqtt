@@ -13,8 +13,6 @@ Setup and run MQTT server ([mosquitto](https://mosquitto.org/) is the easiest on
 
 1. Clone or download this repository
 ```
-mkdir /opt/ewpe-smart-mqtt
-cd /opt/ewpe-smart-mqtt
 git clone https://github.com/stas-demydiuk/ewpe-smart-mqtt
 ```
 2. Install dependencies
@@ -53,6 +51,11 @@ docker run -it \
 ```
 
 ## Installation (service)
+Move directory and prepare
+```
+sudo mv ewpe-smart-mqtt /opt/.
+```
+
 Create file
 `sudo nano /etc/systemd/system/ewpe-smart-mqtt.service`
 ```
