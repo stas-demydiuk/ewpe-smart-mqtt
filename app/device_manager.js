@@ -21,7 +21,7 @@ class DeviceManager extends EventEmitter {
     }
 
     async _registerDevice(message, rinfo) {
-        const deviceId = message.cid || message.mac;
+        const deviceId = message.cid;
         logger.info(`New device found: ${message.name} (mac: ${deviceId}), binding...`)
         const { address, port } = rinfo;
 
@@ -71,11 +71,11 @@ class DeviceManager extends EventEmitter {
             ...acc,
             [key]: response.dat[index]
         }), {});
-        
+
         if('TemSen' in deviceStatus){
         	deviceStatus['TemSen'] +=TEMPERATURE_SENSOR_OFFSET;
         }
-        
+
         this.emit('device_status', deviceId, deviceStatus);
         return deviceStatus;
     }
@@ -97,7 +97,7 @@ class DeviceManager extends EventEmitter {
         const response = await this.connection.sendRequest(device.address, device.port, device.key, payload);
         const deviceStatus = response.opt.reduce((acc, key, index) => ({
             ...acc,
-            [key]: response.val[index]
+            [key]: response.key
         }), {});
 
         this.emit('device_status', deviceId, deviceStatus);

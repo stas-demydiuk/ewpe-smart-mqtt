@@ -50,6 +50,38 @@ docker run -it \
     demydiuk/ewpe-smart-mqtt:latest
 ```
 
+## Installation (service)
+Move directory and prepare
+```
+sudo mv ewpe-smart-mqtt /opt/.
+```
+
+Create file
+`sudo nano /etc/systemd/system/ewpe-smart-mqtt.service`
+```
+[Unit]
+Description=ewpe-smart-mqtt
+After=mosquitto.target
+
+[Service]
+ExecStart=/usr/bin/node /opt/ewpe-smart-mqtt/index.js --NETWORK="192.168.1.255" --MQTT_SERVER="mqtt://127.0.0.1" --MQTT_PORT="1883" --MQTT_USERNAME="" --MQTT_PASSWORD="" --MQTT_BASE_TOPIC="ewpe-smart" --DEVICE_POLL_INTERVAL="5000" 
+# Required on some systems
+WorkingDirectory=/opt/ewpe-smart-mqtt
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+RestartSec=10
+User=pi
+Group=pi
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable service with `sudo systemctl enable ewpe-smart-mqtt.service`
+
+Start/stop service with `sudo systemctl start|stop ewpe-smart-mqtt.service`
+
 ## Communicating with the bridge
 
 - Publish to `ewpe-smart/devices/list` to receive list of registered devices
