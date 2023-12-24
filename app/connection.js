@@ -104,9 +104,25 @@ class Connection extends EventEmitter {
     }
 
     handleResponse(msg, rinfo) {
-        const message = JSON.parse(msg.toString());
+        let message, response;
+
+        try {
+            message = JSON.parse(msg.toString());
+        } catch {
+            logger.error(`Device ${rinfo.address}:${rinfo.port} sent invalid JSON that can not be parsed`)
+            logger.debug(msg)
+            return;
+        }
+
         const key = this.getEncryptionKey(message.cid);
-        const response = decrypt(message.pack, key);
+
+        try {
+            response = decrypt(message.pack, key);
+        } catch {
+            logger.error(`Can not decrypt message from ${message.cid} (${rinfo.address}:${rinfo.port}) with key ${key}`);
+            logger.debug(message.pack)
+            return;
+        }
 
         this.emit(response.t, response, rinfo);
     }
