@@ -71,11 +71,11 @@ class DeviceManager extends EventEmitter {
             ...acc,
             [key]: response.dat[index]
         }), {});
-        
+
         if('TemSen' in deviceStatus){
         	deviceStatus['TemSen'] +=TEMPERATURE_SENSOR_OFFSET;
         }
-        
+
         this.emit('device_status', deviceId, deviceStatus);
         return deviceStatus;
     }

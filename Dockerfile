@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM node:18-alpine
 
 WORKDIR /opt/ewpe-smart-mqtt
 COPY package*.json ./

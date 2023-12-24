@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const dgram = require('dgram');
 const logger = require('winston');
 const EventEmitter = require('events');
@@ -64,7 +63,7 @@ class Connection extends EventEmitter {
             const messageHandler = (msg, rinfo) => {
                 const message = JSON.parse(msg.toString());
                 let response;
-                
+
                 // Check device address data
                 if (rinfo.address !== address || rinfo.port !== port) {
                     return;
@@ -94,11 +93,11 @@ class Connection extends EventEmitter {
 
                 resolve(response);
             }
-        
+
             logger.debug(`Sending request to ${address}:${port}: ${JSON.stringify(payload)}`);
-        
+
             this.socket.on('message', messageHandler);
-    
+
             const toSend = Buffer.from(JSON.stringify(request));
             this.socket.send(toSend, 0, toSend.length, port, address);
         });
