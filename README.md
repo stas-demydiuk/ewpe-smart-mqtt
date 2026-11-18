@@ -89,12 +89,17 @@ WantedBy=multi-user.target
 
 ## Communicating with the bridge
 
-- Publish to `ewpe-smart/devices/list` to receive list of registered devices
-- Publish to `ewpe-smart/{deviceId}/get` to receive status of {deviceId}
+- Publish (any payload) to `ewpe-smart/devices/list` to receive list of registered devices. The list is published to `ewpe-smart/devices`, so subscribe to that topic to read it:
+```
+mosquitto_sub -t ewpe-smart/devices &
+mosquitto_pub -t ewpe-smart/devices/list -m ""
+```
+- Publish to `ewpe-smart/{deviceId}/get` to receive status of {deviceId}; the status is published to `ewpe-smart/{deviceId}/status`
 - Publish to `ewpe-smart/{deviceId}/set` to set status of {deviceId}, payload should be json object with key/values pairs to set, i.e:
 ```
 ewpe-smart/{deviceId}/set {"Pow": 1, "SetTem": 24}
 ```
+- When a device is bound, its info is published to `ewpe-smart/{deviceId}`; its status is then published to `ewpe-smart/{deviceId}/status` every `DEVICE_POLL_INTERVAL` ms
 
 Supported features depend on your AC unit, full list can be found [here ](https://github.com/tomikaa87/gree-remote#reading-status-of-a-device)
 
