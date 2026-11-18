@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  pull_request:
 
 env:
   REGISTRY: docker.io
@@ -11,8 +12,31 @@ env:
 
 
 jobs:
-  build:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  build:
+    needs: test
+    # Pull requests only run tests: Docker Hub secrets are not available there
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
