@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config({ quiet: true });
 const mqtt = require('mqtt');
 const logger = require('winston');
 const DeviceManager = require('./app/device_manager');
