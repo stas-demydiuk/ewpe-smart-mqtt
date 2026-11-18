@@ -1,13 +1,19 @@
 const dgram = require('dgram');
 const logger = require('winston');
 const EventEmitter = require('events');
-const { encrypt, decrypt, defaultKey } = require('./encryptor');
+const { encrypt, decrypt, encryptGcm, decryptGcm, defaultKey, gcmDefaultKey } = require('./encryptor');
 
 const commandsMap = {
     'bind': 'bindok',
     'status': 'dat',
     'cmd': 'res'
 }
+
+// How long to wait for a device to answer a request before giving up. Without
+// this a device that never replies (e.g. a V2 device probed with the V1
+// protocol) leaves the bind promise pending forever.
+const REQUEST_TIMEOUT = 3000;
+const SCAN_INTERVAL = Number(process.env.SCAN_INTERVAL || 60000);
 
 class Connection extends EventEmitter {
     constructor(address) {
@@ -22,6 +28,11 @@ class Connection extends EventEmitter {
             logger.info(`Socket server is listening on ${socketAddress.address}:${socketAddress.port}`)
 
             this.scan(address);
+
+            // Keep scanning so devices that were offline at startup are still found
+            if (SCAN_INTERVAL > 0) {
+                this.scanTimer = setInterval(() => this.scan(address, true), SCAN_INTERVAL);
+            }
         });
 
         this.socket.on('error', (error) => {
@@ -31,48 +42,90 @@ class Connection extends EventEmitter {
         this.socket.bind();
     }
 
-    registerKey(deviceId, key) {
-        this.devices[deviceId] = key;
+    close() {
+        clearInterval(this.scanTimer);
+        this.socket.close();
     }
 
-    getEncryptionKey(deviceId) {
-        return this.devices[deviceId] || defaultKey;
+    registerKey(deviceId, key, version = 1) {
+        this.devices[deviceId] = { key, version };
     }
 
-    scan(networks) {
+    getDevice(deviceId) {
+        return this.devices[deviceId];
+    }
+
+    scan(networks, quiet = false) {
         const message = Buffer.from(JSON.stringify({t: 'scan'}));
 
         this.socket.setBroadcast(true);
 
         networks.split(';').forEach((networkAddress) => {
-            logger.info(`Scanning network ${networkAddress} for available devices...`)
+            logger.log(quiet ? 'debug' : 'info', `Scanning network ${networkAddress} for available devices...`)
             this.socket.send(message, 0, message.length, 7000, networkAddress);
         })
     }
 
-    async sendRequest(address, port, key, payload) {
-        return new Promise((resolve, reject) => {
-            const request = {
+    encryptRequest(payload, key, version) {
+        if (version === 2) {
+            const { pack, tag } = encryptGcm(payload, key);
+
+            return {
                 cid: 'app',
-                i: key === defaultKey ? 1 : 0,
+                i: key === gcmDefaultKey ? 1 : 0,
                 t: 'pack',
                 uid: 0,
-                pack: encrypt(payload, key)
+                tcid: payload.mac,
+                pack,
+                tag
             };
+        }
+
+        return {
+            cid: 'app',
+            i: key === defaultKey ? 1 : 0,
+            t: 'pack',
+            uid: 0,
+            pack: encrypt(payload, key)
+        };
+    }
+
+    decryptResponse(message, key, version) {
+        return version === 2 ? decryptGcm(message.pack, key, message.tag) : decrypt(message.pack, key);
+    }
+
+    async sendRequest(address, port, key, payload, version = 1) {
+        return new Promise((resolve, reject) => {
+            const request = this.encryptRequest(payload, key, version);
+
+            let timeout;
+
+            const cleanup = () => {
+                clearTimeout(timeout);
+                if (this.socket && this.socket.off) {
+                    this.socket.off('message', messageHandler);
+                }
+            }
 
             const messageHandler = (msg, rinfo) => {
-                const message = JSON.parse(msg.toString());
-                let response;
+                let message, response;
 
                 // Check device address data
                 if (rinfo.address !== address || rinfo.port !== port) {
                     return;
                 }
 
+                try {
+                    message = JSON.parse(msg.toString());
+                } catch {
+                    // Invalid JSON is already reported by handleResponse
+                    return;
+                }
+
                 logger.debug(`Received message from ${message.cid} (${rinfo.address}:${rinfo.port}) ${msg.toString()}`);
 
                 try {
-                    response = decrypt(message.pack, key);
+                    response = this.decryptResponse(message, key, version);
                 } catch (e) {
                     logger.error(`Can not decrypt message from ${message.cid} (${rinfo.address}:${rinfo.port}) with key ${key}`);
                     logger.debug(message.pack)
@@ -87,12 +140,14 @@ class Connection extends EventEmitter {
                     return;
                 }
 
-                if (this.socket && this.socket.off) {
-                    this.socket.off('message', messageHandler);
-                }
-
+                cleanup();
                 resolve(response);
             }
+
+            timeout = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Request to ${address}:${port} (${payload.t}) timed out`));
+            }, REQUEST_TIMEOUT);
 
             logger.debug(`Sending request to ${address}:${port}: ${JSON.stringify(payload)}`);
 
@@ -114,12 +169,28 @@ class Connection extends EventEmitter {
             return;
         }
 
-        const key = this.getEncryptionKey(message.cid);
+        // A device may speak either the V1 (ECB) or V2 (GCM) protocol. Try a
+        // registered key first, then both generic keys, so discovery works
+        // regardless of firmware.
+        const registered = this.devices[message.cid];
+        const candidates = [];
+        if (registered) {
+            candidates.push(registered);
+        }
+        candidates.push({ key: defaultKey, version: 1 });
+        candidates.push({ key: gcmDefaultKey, version: 2 });
 
-        try {
-            response = decrypt(message.pack, key);
-        } catch {
-            logger.error(`Can not decrypt message from ${message.cid} (${rinfo.address}:${rinfo.port}) with key ${key}`);
+        for (const { key, version } of candidates) {
+            try {
+                response = this.decryptResponse(message, key, version);
+                break;
+            } catch {
+                // try the next candidate
+            }
+        }
+
+        if (!response) {
+            logger.error(`Can not decrypt message from ${message.cid} (${rinfo.address}:${rinfo.port})`);
             logger.debug(message.pack)
             return;
         }

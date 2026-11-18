@@ -44,8 +44,13 @@ mqttClient.on('connect', () => {
     const deviceManager = new DeviceManager(networkAddress, pollInterval);
 
     const getDeviceStatus = async (deviceId) => {
-        const deviceStatus = await deviceManager.getDeviceStatus(deviceId);
-        mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(deviceStatus));
+        try {
+            const deviceStatus = await deviceManager.getDeviceStatus(deviceId);
+            mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(deviceStatus));
+        } catch (e) {
+            // A single unreachable device must not take down the whole bridge
+            logger.warn(`Status request for ${deviceId} failed: ${e.message}`);
+        }
     }
 
     mqttClient.publish(`${mqttBaseTopic}/bridge/state`, 'online');
@@ -69,8 +74,12 @@ mqttClient.on('connect', () => {
                 }
 
                 if (command === 'set') {
-                    const cmdResult = await deviceManager.setDeviceState(deviceId, JSON.parse(message));
-                    mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(cmdResult));
+                    try {
+                        const cmdResult = await deviceManager.setDeviceState(deviceId, JSON.parse(message));
+                        mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(cmdResult));
+                    } catch (e) {
+                        logger.warn(`Set request for ${deviceId} failed: ${e.message}`);
+                    }
                 }
             }
         }

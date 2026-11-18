@@ -30,6 +30,7 @@ npm install
 | MQTT_BASE_TOPIC |Base MQTT topic for bridge messages|ewpe-smart
 | NETWORK |Network adress (or addresses separated by semicolon) to scan devices |192.168.1.255
 | DEVICE_POLL_INTERVAL |Interval (ms) to poll device status|5000
+| SCAN_INTERVAL |Interval (ms) to rescan the network for new devices, 0 to disable|60000
 | LOG_LEVEL |App Log level|info
 
 4. Run the bridge

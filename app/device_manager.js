@@ -1,7 +1,7 @@
 const logger = require('winston');
 const EventEmitter = require('events');
 const Connection = require('./connection');
-const { defaultKey } = require('./encryptor');
+const { defaultKey, gcmDefaultKey } = require('./encryptor');
 const TEMPERATURE_SENSOR_OFFSET = -40;
 
 // https://github.com/tomikaa87/gree-remote
@@ -16,35 +16,79 @@ class DeviceManager extends EventEmitter {
         super();
         this.connection = new Connection(networkAddress);
         this.devices = {};
+        this.binding = {};
 
         this.connection.on('dev', this._registerDevice.bind(this));
     }
 
+    close() {
+        this.connection.close();
+    }
+
+    async _bind(address, port, deviceId) {
+        const payload = { mac: deviceId, t: 'bind', uid: 0 };
+
+        // Newer EWPE/Gree firmware speaks the V2 (AES-GCM) protocol and simply
+        // ignores V1 (AES-ECB) bind requests. Try V2 first, then fall back to
+        // V1 for older units.
+        try {
+            const { key } = await this.connection.sendRequest(address, port, gcmDefaultKey, payload, 2);
+            return { key, version: 2 };
+        } catch (e) {
+            logger.debug(`V2 bind failed for ${deviceId} (${e.message}), trying V1...`);
+            const { key } = await this.connection.sendRequest(address, port, defaultKey, payload, 1);
+            return { key, version: 1 };
+        }
+    }
+
     async _registerDevice(message, rinfo) {
         const deviceId = message.cid || message.mac;
+
+        // Devices answer the scan more than once; don't bind the same one twice.
+        if (this.devices[deviceId]) {
+            // Follow the device if its IP changed (e.g. new DHCP lease)
+            const device = this.devices[deviceId];
+            if (device.address !== rinfo.address || device.port !== rinfo.port) {
+                logger.info(`Device ${deviceId} moved to ${rinfo.address}:${rinfo.port}`);
+                device.address = rinfo.address;
+                device.port = rinfo.port;
+            }
+            return;
+        }
+        if (this.binding[deviceId]) {
+            return;
+        }
+        this.binding[deviceId] = true;
+
         logger.info(`New device found: ${message.name} (mac: ${deviceId}), binding...`)
         const { address, port } = rinfo;
 
-        const { key } = await this.connection.sendRequest(address, port, defaultKey, {
-            mac: deviceId,
-            t: 'bind',
-            uid: 0
-        });
+        let key, version;
+        try {
+            ({ key, version } = await this._bind(address, port, deviceId));
+        } catch (e) {
+            delete this.binding[deviceId];
+            logger.error(`Can not bind device ${deviceId}: ${e.message}`);
+            return;
+        }
 
         const device = {
             ...message,
+            mac: deviceId,
             address,
             port,
             key,
+            version,
             t: undefined
         };
 
         this.devices[deviceId] = device;
+        delete this.binding[deviceId];
 
-        this.connection.registerKey(deviceId, key);
+        this.connection.registerKey(deviceId, key, version);
 
         this.emit('device_bound', deviceId, device);
-        logger.info(`New device bound: ${device.name} (${device.address}:${device.port})`);
+        logger.info(`New device bound (v${version}): ${device.name} (${device.address}:${device.port})`);
 
         return device;
     }
@@ -66,7 +110,7 @@ class DeviceManager extends EventEmitter {
             t: 'status'
         };
 
-        const response = await this.connection.sendRequest(device.address, device.port, device.key, payload);
+        const response = await this.connection.sendRequest(device.address, device.port, device.key, payload, device.version);
         const deviceStatus = response.cols.reduce((acc, key, index) => ({
             ...acc,
             [key]: response.dat[index]
@@ -94,7 +138,7 @@ class DeviceManager extends EventEmitter {
             t: 'cmd'
         };
 
-        const response = await this.connection.sendRequest(device.address, device.port, device.key, payload);
+        const response = await this.connection.sendRequest(device.address, device.port, device.key, payload, device.version);
         const deviceStatus = response.opt.reduce((acc, key, index) => ({
             ...acc,
             [key]: response.val[index]
