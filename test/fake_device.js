@@ -6,16 +6,17 @@ const DEVICE_KEY = 'abcdefghijklmnop';
 /**
  * Minimal UDP simulator of an EWPE/Gree air conditioner.
  *
- * Both firmware generations answer the discovery scan over V1 (AES-ECB).
+ * Most units answer the discovery scan over V1 (AES-ECB), some over V2 (scanProtocol: 2).
  * - protocol 1: binding, status and commands over V1 (AES-ECB)
  * - protocol 2: binding, status and commands over V2 (AES-GCM); V1 requests are ignored
  * - answerBind: false simulates a unit that is discovered but never binds
  */
 class FakeDevice {
-    constructor({ mac = 'aabbccddeeff', name = 'fake', protocol = 1, answerBind = true, sendTag = true } = {}) {
+    constructor({ mac = 'aabbccddeeff', name = 'fake', protocol = 1, scanProtocol = 1, answerBind = true, sendTag = true } = {}) {
         this.mac = mac;
         this.name = name;
         this.protocol = protocol;
+        this.scanProtocol = scanProtocol;
         this.answerBind = answerBind;
         this.sendTag = sendTag;
         this.requests = [];
@@ -42,8 +43,9 @@ class FakeDevice {
         this.requests.push(request);
 
         if (request.t === 'scan') {
-            const pack = encrypt({ t: 'dev', cid: this.mac, mac: this.mac, name: this.name });
-            return this._send({ t: 'pack', i: 1, uid: 0, cid: this.mac, tcid: '', pack }, rinfo);
+            const info = { t: 'dev', cid: this.mac, mac: this.mac, name: this.name };
+            const envelope = this.scanProtocol === 2 ? encryptGcm(info) : { pack: encrypt(info) };
+            return this._send({ t: 'pack', i: 1, uid: 0, cid: this.mac, tcid: '', ...envelope }, rinfo);
         }
 
         const isV2 = 'tag' in request;

@@ -95,6 +95,21 @@ describe('DeviceManager', { concurrency: 1, timeout: 15000 }, () => {
         });
     });
 
+    // Seen in the wild (issue #29): firmware V2.0.0 answers even the scan over V2
+    describe('V2 device answering the scan over V2', () => {
+        beforeEach(() => start({ protocol: 2, scanProtocol: 2, name: 'v2-scan' }));
+
+        it('is discovered and binds over V2', async () => {
+            const { deviceId, bound } = await waitForBind();
+
+            assert.equal(bound.name, 'v2-scan');
+            assert.equal(bound.version, 2);
+
+            const status = await manager.getDeviceStatus(deviceId);
+            assert.equal(status.SetTem, 24);
+        });
+    });
+
     describe('V2 device without auth tag', () => {
         beforeEach(() => start({ protocol: 2, sendTag: false }));
 
