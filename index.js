@@ -37,7 +37,9 @@ logger.info(`Trying to connect to MQTT server ${mqttServerAddress} ...`)
 const mqttClient = mqtt.connect(mqttServerAddress, {
     username: mqttServerUsername,
     password: mqttServerpassword,
-    port: mqttServerport
+    port: mqttServerport,
+    // Let the broker announce the bridge as offline if the connection drops
+    will: { topic: bridgeStateTopic, payload: 'offline' }
 });
 
 // Created once on the first connection and kept across MQTT reconnects, so a
@@ -119,3 +121,26 @@ mqttClient.on('error', (error) => {
     logger.error(error);
 });
 
+let shuttingDown = false;
+
+const shutdown = (signal) => {
+    if (shuttingDown) {
+        return;
+    }
+    shuttingDown = true;
+
+    logger.info(`Received ${signal}, shutting down...`);
+    deviceManager?.close();
+
+    // Don't hang on shutdown if the broker is unreachable
+    setTimeout(() => process.exit(0), 2000).unref();
+
+    if (mqttClient.connected) {
+        mqttClient.publish(bridgeStateTopic, 'offline', () => mqttClient.end(false, () => process.exit(0)));
+    } else {
+        mqttClient.end(true, () => process.exit(0));
+    }
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

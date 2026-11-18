@@ -100,6 +100,7 @@ mosquitto_pub -t ewpe-smart/devices/list -m ""
 ewpe-smart/{deviceId}/set {"Pow": 1, "SetTem": 24}
 ```
 - When a device is bound, its info is published to `ewpe-smart/{deviceId}`; its status is then published to `ewpe-smart/{deviceId}/status` every `DEVICE_POLL_INTERVAL` ms
+- `ewpe-smart/bridge/state` is `online` while the bridge is connected and `offline` after it stops or loses connection
 
 Supported features depend on your AC unit, full list can be found [here ](https://github.com/tomikaa87/gree-remote#reading-status-of-a-device)
 
