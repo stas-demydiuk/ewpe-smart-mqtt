@@ -30,6 +30,9 @@ logger.configure({
     ]
 });
 
+const bridgeStateTopic = `${mqttBaseTopic}/bridge/state`;
+const deviceRegex = new RegExp(`^${mqttBaseTopic}\/([0-9a-h]{12})\/(.*)$`, 'i');
+
 logger.info(`Trying to connect to MQTT server ${mqttServerAddress} ...`)
 const mqttClient = mqtt.connect(mqttServerAddress, {
     username: mqttServerUsername,
@@ -37,63 +40,82 @@ const mqttClient = mqtt.connect(mqttServerAddress, {
     port: mqttServerport
 });
 
-mqttClient.on('connect', () => {
-    logger.info('Successfully connected to MQTT server');
+// Created once on the first connection and kept across MQTT reconnects, so a
+// broker or network restart doesn't spawn duplicate sockets, pollers and listeners
+let deviceManager;
 
-    const deviceRegex = new RegExp(`^${mqttBaseTopic}\/([0-9a-h]{12})\/(.*)$`, 'i');
-    const deviceManager = new DeviceManager(networkAddress, pollInterval);
-
-    const getDeviceStatus = async (deviceId) => {
-        try {
-            const deviceStatus = await deviceManager.getDeviceStatus(deviceId);
-            mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(deviceStatus));
-        } catch (e) {
-            // A single unreachable device must not take down the whole bridge
-            logger.warn(`Status request for ${deviceId} failed: ${e.message}`);
-        }
+const getDeviceStatus = async (deviceId) => {
+    try {
+        const deviceStatus = await deviceManager.getDeviceStatus(deviceId);
+        mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(deviceStatus));
+    } catch (e) {
+        // A single unreachable device must not take down the whole bridge
+        logger.warn(`Status request for ${deviceId} failed: ${e.message}`);
     }
+}
 
-    mqttClient.publish(`${mqttBaseTopic}/bridge/state`, 'online');
-    mqttClient.subscribe(`${mqttBaseTopic}/#`);
-
-    mqttClient.on('message', async (topic, message) => {
-        let matches;
-
-        logger.info(`MQTT message received: ${topic} ${message}`);
-
-        if (topic === `${mqttBaseTopic}/devices/list`) {
-            mqttClient.publish(`${mqttBaseTopic}/devices`, JSON.stringify(deviceManager.getDevices()))
-        } else {
-            matches = deviceRegex.exec(topic);
-
-            if (matches !== null) {
-                const [, deviceId, command] = matches;
-
-                if (command === 'get') {
-                    getDeviceStatus(deviceId);
-                }
-
-                if (command === 'set') {
-                    try {
-                        const cmdResult = await deviceManager.setDeviceState(deviceId, JSON.parse(message));
-                        mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(cmdResult));
-                    } catch (e) {
-                        logger.warn(`Set request for ${deviceId} failed: ${e.message}`);
-                    }
-                }
-            }
-        }
-    });
+const startDeviceManager = () => {
+    deviceManager = new DeviceManager(networkAddress);
 
     deviceManager.on('device_bound', (deviceId, device) => {
         mqttClient.publish(`${mqttBaseTopic}/${deviceId}`, JSON.stringify(device));
 
         if (pollInterval > 0) {
-            setInterval(() => getDeviceStatus(deviceId), pollInterval);
+            setInterval(() => {
+                // Don't poll (and queue status messages) while the broker is unreachable
+                if (mqttClient.connected) {
+                    getDeviceStatus(deviceId);
+                }
+            }, pollInterval);
         }
     });
+}
+
+mqttClient.on('connect', () => {
+    logger.info('Successfully connected to MQTT server');
+
+    if (!deviceManager) {
+        startDeviceManager();
+    }
+
+    mqttClient.publish(bridgeStateTopic, 'online');
+    mqttClient.subscribe(`${mqttBaseTopic}/#`);
+});
+
+mqttClient.on('message', async (topic, message) => {
+    let matches;
+
+    logger.info(`MQTT message received: ${topic} ${message}`);
+
+    if (!deviceManager) {
+        return;
+    }
+
+    if (topic === `${mqttBaseTopic}/devices/list`) {
+        mqttClient.publish(`${mqttBaseTopic}/devices`, JSON.stringify(deviceManager.getDevices()))
+    } else {
+        matches = deviceRegex.exec(topic);
+
+        if (matches !== null) {
+            const [, deviceId, command] = matches;
+
+            if (command === 'get') {
+                getDeviceStatus(deviceId);
+            }
+
+            if (command === 'set') {
+                try {
+                    const cmdResult = await deviceManager.setDeviceState(deviceId, JSON.parse(message));
+                    mqttClient.publish(`${mqttBaseTopic}/${deviceId}/status`, JSON.stringify(cmdResult));
+                } catch (e) {
+                    logger.warn(`Set request for ${deviceId} failed: ${e.message}`);
+                }
+            }
+        }
+    }
 });
 
 mqttClient.on('error', (error) => {
     logger.error(error);
 });
+
